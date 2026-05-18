@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "human-to-sympy"
+version = "0.1.0"
+description = "Parse human-typed equation strings into canonical SymPy expressions"
+requires-python = ">=3.11"
+license = "MIT"
+readme = "README.md"
+dependencies = [
+    "sympy>=1.14.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pyright"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.pyright]
+include = ["human_to_sympy"]
+venvPath = "."
+venv = ".venv"
+
+[tool.hatch.build.targets.wheel]
+packages = ["human_to_sympy"]
