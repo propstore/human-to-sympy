@@ -11,6 +11,13 @@ from tokenize import TokenError
 from sympy import Function, Symbol, SympifyError
 from sympy.parsing.sympy_parser import parse_expr
 
+from human_to_sympy.numeric import (
+    NumericEvaluation,
+    NumericEvaluationStatus,
+    evaluate_numeric,
+    parse_cached,
+)
+
 _SYMPY_CONSTANTS = {"pi", "E", "I", "oo", "zoo", "nan"}
 _IDENTIFIER_RE = re.compile(r"[A-Za-z_]\w*")
 _SYMPY_BUILTINS = {
@@ -129,10 +136,14 @@ def check_symbols(
 
 
 __all__ = [
+    "NumericEvaluation",
+    "NumericEvaluationStatus",
     "SympyEquationGenerationResult",
     "SympyGenerationResult",
     "check_symbols",
+    "evaluate_numeric",
     "generate_sympy_equation",
     "generate_sympy_rhs",
     "generate_sympy_rhs_with_error",
+    "parse_cached",
 ]
