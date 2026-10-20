@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from tokenize import TokenError
 
-from sympy import Eq, Expr, Function, Symbol, SympifyError
+from sympy import Eq, Expr, Function, Symbol, SympifyError, evaluate
 from sympy.core.relational import Equality
 from sympy.parsing.sympy_parser import parse_expr
 
@@ -41,32 +41,36 @@ def _build_local_dict(text: str) -> dict[str, Symbol | Function]:
 
 
 def parse_symbolic(
-    expression: str, *, symbol_names: Sequence[str] = (),
+    expression: str, *, symbol_names: Sequence[str] = (), output_symbol: str | None = None,
 ) -> Expr | Equality:
     """Parse authored scalar math without simplifying away semantic obligations.
 
     Unlike canonical string generation, this preserves additions, cancellation,
     and equal sides so dimensional checks can inspect the authored operations.
     Explicit bindings also disambiguate names such as ``E`` from constants.
+    ``output_symbol`` supplies the left side when the authored text is a RHS.
     """
     text = expression.strip().replace("^", "**")
     if not text:
         raise ValueError("empty expression")
     local_dict = _build_local_dict(text)
     local_dict.update({name: Symbol(name) for name in symbol_names})
-    if "=" in text:
-        if text.count("=") != 1:
-            raise ValueError("equation must contain exactly one '='")
-        lhs, rhs = (part.strip() for part in text.split("="))
-        if not lhs or not rhs:
-            raise ValueError("equation must have non-empty left and right sides")
-        parsed = Eq(
-            parse_expr(lhs, local_dict=local_dict, evaluate=False),
-            parse_expr(rhs, local_dict=local_dict, evaluate=False),
-            evaluate=False,
-        )
-    else:
-        parsed = parse_expr(text, local_dict=local_dict, evaluate=False)
+    with evaluate(False):
+        if "=" in text:
+            if text.count("=") != 1:
+                raise ValueError("equation must contain exactly one '='")
+            lhs, rhs = (part.strip() for part in text.split("="))
+            if not lhs or not rhs:
+                raise ValueError("equation must have non-empty left and right sides")
+            parsed = Eq(
+                parse_expr(lhs, local_dict=local_dict, evaluate=False),
+                parse_expr(rhs, local_dict=local_dict, evaluate=False),
+                evaluate=False,
+            )
+        else:
+            parsed = parse_expr(text, local_dict=local_dict, evaluate=False)
+        if output_symbol is not None and isinstance(parsed, Expr):
+            parsed = Eq(Symbol(output_symbol), parsed, evaluate=False)
     if not isinstance(parsed, (Expr, Equality)):
         raise ValueError("expected a scalar expression or equation")
     return parsed
