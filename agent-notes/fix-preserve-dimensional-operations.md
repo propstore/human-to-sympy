@@ -30,3 +30,10 @@ surfaces. Existing string/numeric APIs are unchanged. Publish draft and read CI.
   Propstore composes its symbolic result directly without importing untyped
   SymPy constructors. Explicit full equalities retain their authored left side.
 - Next: run focused cases, push, verify full CI, then independent delta review.
+- Follow-up review reproduced scalar erasure in Python or/and, if expressions,
+  Piecewise and tuple/list/attribute selection. Ten new cases failed before
+  correction (nine erased operands; __class__ raised an untyped TypeError).
+  Reject these unsupported forms through a static syntax walk before SymPy can
+  discard any branch. Preserve the existing arithmetic/function path. Include
+  missing-symbol erasure and (m+t).args[0] as regressions. Parent requested typed
+  unsupported/quarantine rather than implementing new conditional semantics.

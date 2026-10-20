@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import logging
 import re
 from collections.abc import Mapping, Sequence
@@ -53,6 +54,20 @@ def parse_symbolic(
     text = expression.strip().replace("^", "**")
     if not text:
         raise ValueError("empty expression")
+    # Selection can discard unchecked operands even inside evaluate(False).
+    # This scalar API does not support conditional or selection semantics.
+    for side in text.split("="):
+        try:
+            syntax = ast.parse(side.strip(), mode="eval")
+        except SyntaxError as exc:
+            raise ValueError("unsupported authored syntax") from exc
+        for node in ast.walk(syntax):
+            if isinstance(node, (ast.BoolOp, ast.IfExp, ast.Subscript, ast.Attribute)) or (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "Piecewise"
+            ):
+                raise ValueError(f"unsupported authored syntax: {type(node).__name__}")
     local_dict = _build_local_dict(text)
     local_dict.update({name: Symbol(name) for name in symbol_names})
     with evaluate(False):

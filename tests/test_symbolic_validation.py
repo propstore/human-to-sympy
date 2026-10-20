@@ -37,3 +37,21 @@ def test_output_symbol_supplies_only_a_missing_left_side() -> None:
 def test_invalid_scalar_surface_has_a_parse_failure(text: str) -> None:
     with pytest.raises(ValueError):
         parse_symbolic(text)
+
+
+@pytest.mark.parametrize("text", [
+    "F = F or (m + t)",
+    "F = F or unknown",
+    "F = F and (m + t)",
+    "m = m if r else t",
+    "m = Piecewise((m, True), (m+t, False))",
+    "m = m + (t if r else 0)",
+    "m = [m, m + t][0]",
+    "F = (F, m+t)[0]",
+    "F = [F, unknown][0]",
+    "F = F.__class__(F)",
+    "m = (m+t).args[0]",
+])
+def test_conditional_or_selection_syntax_cannot_erase_authored_obligations(text: str) -> None:
+    with pytest.raises(ValueError, match="unsupported authored syntax"):
+        parse_symbolic(text)
