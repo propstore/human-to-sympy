@@ -38,6 +38,20 @@ from human_to_sympy import (
   both sides of an `lhs = rhs` equation.
 - `check_symbols(text, variables) -> list[str]` — warns when expression free
   symbols are not declared in the supplied variable list.
+- `parse_symbolic(text, *, symbol_names=(), output_symbol=None)` - returns an
+  unsimplified scalar expression or equality for semantic validation. Explicit
+  symbol bindings disambiguate constants such as `E`; `output_symbol` supplies
+  the left side only for a bare right-hand expression.
+
+Scalar text supports numeric literals, identifiers/constants, parentheses,
+binary `+`, `-`, `*`, `/`, `%`, `^`/`**`, unary `+`/`-`, and direct named
+function calls with scalar positional arguments (`sin(x)`, `f(x)`, `Max(x,y)`).
+Both infix `F=m*a` and functional `Eq(F,m*a)` equations are supported. String
+parsing APIs apply this same scalar grammar before evaluation; their result
+objects retain parse failures. `parse_symbolic` raises a parse error directly.
+Python containers, unpacking, comprehensions, generators, attribute/index
+selection, conditionals, lambdas, keywords and non-numeric literals are outside
+this grammar. They are rejected before evaluation can discard authored inputs.
 
 ## Example
 

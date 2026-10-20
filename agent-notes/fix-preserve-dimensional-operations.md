@@ -44,3 +44,23 @@ surfaces. Existing string/numeric APIs are unchanged. Publish draft and read CI.
   invalid-dimensional and missing-symbol arguments. No lambda evaluation or
   lambda semantics is added. Before this final delta, hosted CI39513860531
   passed 48 tests and typing; rerun owner CI at the new final head.
+- Parent re-review found container/comprehension/starred erasure at 2fc8674.
+  The blacklist was the wrong representation of a supported scalar grammar.
+  Replace it with one positive AST boundary: numeric literals, names, arithmetic
+  operators, and direct named calls with scalar positional arguments only.
+  All other Python constructs must fail before parse_expr, including containers,
+  generators, unpacking, attributes, conditions and anonymous functions.
+  Estimated correction: about 30 source lines, grammar acceptance/rejection
+  properties and normal stored-claim regression cases. Canonical/numeric APIs
+  remain unchanged; document the new checked parser's precise scalar contract.
+- Real consumer red run: three container/comprehension cases were admitted and
+  one generator aborted with NameError at the earlier RHS generation call;
+  dimension-container-erasure-red-20261020-173936.log, four failures.
+- One positive scalar grammar now gates symbolic parsing and both string-result
+  generators (plus symbol warnings) before evaluation. Result APIs preserve
+  expected parse failures, including name/depth errors; unexpected RuntimeError
+  still propagates. No consumer parsing or replacement evaluation path added.
+- Focused parser file passes 90 cases (1.21s): accepted documented scalar math,
+  operand-name retention across 13 scalar wrappers, rejected Python productions,
+  and patched-evaluator checks proving unsupported syntax is never evaluated.
+  Publish, read full hosted tests/typing, then independently review final heads.

@@ -41,6 +41,28 @@ def _build_local_dict(text: str) -> dict[str, Symbol | Function]:
     return local_dict
 
 
+def _validate_scalar_syntax(text: str) -> None:
+    """Accept only scalar productions before any SymPy/Python evaluation."""
+    try:
+        syntax = ast.parse(text, mode="eval")
+    except SyntaxError as exc:
+        raise ValueError("unsupported authored syntax") from exc
+    productions = (
+        ast.Expression, ast.Name, ast.Load, ast.Constant,
+        ast.BinOp, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod,
+        ast.UnaryOp, ast.UAdd, ast.USub, ast.Call,
+    )
+    for node in ast.walk(syntax):
+        if not isinstance(node, productions):
+            raise ValueError(f"unsupported authored syntax: {type(node).__name__}")
+        if isinstance(node, ast.Constant) and type(node.value) not in (int, float, complex):
+            raise ValueError("unsupported authored syntax: non-numeric literal")
+        if isinstance(node, ast.Call) and (
+            not isinstance(node.func, ast.Name) or node.keywords
+        ):
+            raise ValueError("unsupported authored syntax: expected a named scalar call")
+
+
 def parse_symbolic(
     expression: str, *, symbol_names: Sequence[str] = (), output_symbol: str | None = None,
 ) -> Expr | Equality:
@@ -54,20 +76,8 @@ def parse_symbolic(
     text = expression.strip().replace("^", "**")
     if not text:
         raise ValueError("empty expression")
-    # Selection can discard unchecked operands even inside evaluate(False).
-    # This scalar API does not support conditional or selection semantics.
     for side in text.split("="):
-        try:
-            syntax = ast.parse(side.strip(), mode="eval")
-        except SyntaxError as exc:
-            raise ValueError("unsupported authored syntax") from exc
-        for node in ast.walk(syntax):
-            if isinstance(node, (ast.BoolOp, ast.IfExp, ast.Subscript, ast.Attribute, ast.Lambda)) or (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id == "Piecewise"
-            ):
-                raise ValueError(f"unsupported authored syntax: {type(node).__name__}")
+        _validate_scalar_syntax(side.strip())
     local_dict = _build_local_dict(text)
     local_dict.update({name: Symbol(name) for name in symbol_names})
     with evaluate(False):
@@ -123,9 +133,10 @@ def generate_sympy_rhs_with_error(expression: str | None) -> SympyGenerationResu
         return SympyGenerationResult(None, "expression has no right-hand side")
 
     try:
+        _validate_scalar_syntax(text)
         result = parse_expr(text, local_dict=_build_local_dict(text))
         return SympyGenerationResult(str(result), None)
-    except (SympifyError, TypeError, ValueError, SyntaxError, TokenError) as exc:
+    except (SympifyError, TypeError, ValueError, SyntaxError, TokenError, NameError, RecursionError) as exc:
         logging.warning("SymPy parse_expr failed for %r: %s", text, exc)
         return SympyGenerationResult(None, str(exc))
 
@@ -148,10 +159,12 @@ def generate_sympy_equation(expression: str | None) -> SympyEquationGenerationRe
     if not lhs_text or not rhs_text:
         return SympyEquationGenerationResult(None, None, "equation must have non-empty left and right sides")
     try:
+        _validate_scalar_syntax(lhs_text)
+        _validate_scalar_syntax(rhs_text)
         lhs = parse_expr(lhs_text, local_dict=_build_local_dict(lhs_text))
         rhs = parse_expr(rhs_text, local_dict=_build_local_dict(rhs_text))
         return SympyEquationGenerationResult(str(lhs), str(rhs), None)
-    except (SympifyError, TypeError, ValueError, SyntaxError, TokenError) as exc:
+    except (SympifyError, TypeError, ValueError, SyntaxError, TokenError, NameError, RecursionError) as exc:
         logging.warning("SymPy parse_expr failed for equation %r: %s", text, exc)
         return SympyEquationGenerationResult(None, None, str(exc))
 
@@ -174,8 +187,9 @@ def check_symbols(
         return []
 
     try:
+        _validate_scalar_syntax(text)
         expr = parse_expr(text, local_dict=_build_local_dict(text))
-    except (SympifyError, SyntaxError, TypeError, ValueError):
+    except (SympifyError, SyntaxError, TypeError, ValueError, TokenError, NameError, RecursionError):
         return []
 
     free = {str(s) for s in expr.free_symbols}
