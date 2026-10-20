@@ -37,3 +37,10 @@ surfaces. Existing string/numeric APIs are unchanged. Publish draft and read CI.
   discard any branch. Preserve the existing arithmetic/function path. Include
   missing-symbol erasure and (m+t).args[0] as regressions. Parent requested typed
   unsupported/quarantine rather than implementing new conditional semantics.
+- End-to-end follow-up: F = (lambda x: 0)(m+t) was admitted at f05af3d because
+  the Python function discarded its authored argument. Consumer red regression
+  failed with blocked=False (dimension-lambda-erasure-red-20261020-172729.log).
+  Add Lambda to the same pre-evaluation unsupported syntax set; cover both
+  invalid-dimensional and missing-symbol arguments. No lambda evaluation or
+  lambda semantics is added. Before this final delta, hosted CI39513860531
+  passed 48 tests and typing; rerun owner CI at the new final head.

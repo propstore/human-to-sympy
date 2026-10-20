@@ -51,6 +51,8 @@ def test_invalid_scalar_surface_has_a_parse_failure(text: str) -> None:
     "F = [F, unknown][0]",
     "F = F.__class__(F)",
     "m = (m+t).args[0]",
+    "F = (lambda x: 0)(m+t)",
+    "F = (lambda x: 0)(unknown)",
 ])
 def test_conditional_or_selection_syntax_cannot_erase_authored_obligations(text: str) -> None:
     with pytest.raises(ValueError, match="unsupported authored syntax"):

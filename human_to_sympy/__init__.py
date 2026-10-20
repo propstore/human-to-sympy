@@ -62,7 +62,7 @@ def parse_symbolic(
         except SyntaxError as exc:
             raise ValueError("unsupported authored syntax") from exc
         for node in ast.walk(syntax):
-            if isinstance(node, (ast.BoolOp, ast.IfExp, ast.Subscript, ast.Attribute)) or (
+            if isinstance(node, (ast.BoolOp, ast.IfExp, ast.Subscript, ast.Attribute, ast.Lambda)) or (
                 isinstance(node, ast.Call)
                 and isinstance(node.func, ast.Name)
                 and node.func.id == "Piecewise"
