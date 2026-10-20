@@ -60,12 +60,13 @@ def parse_symbolic(
         lhs, rhs = (part.strip() for part in text.split("="))
         if not lhs or not rhs:
             raise ValueError("equation must have non-empty left and right sides")
-        return Eq(
+        parsed = Eq(
             parse_expr(lhs, local_dict=local_dict, evaluate=False),
             parse_expr(rhs, local_dict=local_dict, evaluate=False),
             evaluate=False,
         )
-    parsed = parse_expr(text, local_dict=local_dict, evaluate=False)
+    else:
+        parsed = parse_expr(text, local_dict=local_dict, evaluate=False)
     if not isinstance(parsed, (Expr, Equality)):
         raise ValueError("expected a scalar expression or equation")
     return parsed
