@@ -8,7 +8,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from tokenize import TokenError
 
-from sympy import Function, Symbol, SympifyError
+from sympy import Eq, Expr, Function, Symbol, SympifyError
+from sympy.core.relational import Equality
 from sympy.parsing.sympy_parser import parse_expr
 
 from human_to_sympy.numeric import (
@@ -37,6 +38,37 @@ def _build_local_dict(text: str) -> dict[str, Symbol | Function]:
     local_dict: dict[str, Symbol | Function] = {name: Symbol(name) for name in names}
     local_dict.update({name: Function(name) for name in function_names})
     return local_dict
+
+
+def parse_symbolic(
+    expression: str, *, symbol_names: Sequence[str] = (),
+) -> Expr | Equality:
+    """Parse authored scalar math without simplifying away semantic obligations.
+
+    Unlike canonical string generation, this preserves additions, cancellation,
+    and equal sides so dimensional checks can inspect the authored operations.
+    Explicit bindings also disambiguate names such as ``E`` from constants.
+    """
+    text = expression.strip().replace("^", "**")
+    if not text:
+        raise ValueError("empty expression")
+    local_dict = _build_local_dict(text)
+    local_dict.update({name: Symbol(name) for name in symbol_names})
+    if "=" in text:
+        if text.count("=") != 1:
+            raise ValueError("equation must contain exactly one '='")
+        lhs, rhs = (part.strip() for part in text.split("="))
+        if not lhs or not rhs:
+            raise ValueError("equation must have non-empty left and right sides")
+        return Eq(
+            parse_expr(lhs, local_dict=local_dict, evaluate=False),
+            parse_expr(rhs, local_dict=local_dict, evaluate=False),
+            evaluate=False,
+        )
+    parsed = parse_expr(text, local_dict=local_dict, evaluate=False)
+    if not isinstance(parsed, (Expr, Equality)):
+        raise ValueError("expected a scalar expression or equation")
+    return parsed
 
 
 @dataclass(frozen=True)
@@ -136,6 +168,7 @@ def check_symbols(
 
 
 __all__ = [
+    "parse_symbolic",
     "NumericEvaluation",
     "NumericEvaluationStatus",
     "SympyEquationGenerationResult",
